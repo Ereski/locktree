@@ -61,7 +61,6 @@ impl Lock {
             proc_macro2::Span::call_site(),
         );
         let inner_type = self.ty.inner_type();
-        let new_fn = self.ty.new_fn();
 
         Fragment {
             main_accessors: self
@@ -78,7 +77,7 @@ impl Lock {
                 #init_var: #inner_type
             },
             init_statement: quote! {
-                #name: #new_fn(#init_var),
+                #name: ::locktree::New::new(#init_var),
             },
         }
     }
@@ -134,7 +133,7 @@ impl LockType {
                     pub fn #lock_fn_name<'a>(
                         &'a mut self
                     ) -> (
-                        ::locktree::PluggedMutexGuard<'a, ::std::sync::Mutex<#generics>, #generics>,
+                        ::locktree::PluggedMutexGuard<'a, ::std::sync::Mutex<#generics>>,
                         #forward<'a>
                     ) {
                         (::locktree::Mutex::lock(&#accessor.#name), #forward { locks: #accessor })
@@ -155,7 +154,7 @@ impl LockType {
                     pub fn #read_fn_name<'a>(
                         &'a mut self
                     ) -> (
-                        ::locktree::PluggedRwLockReadGuard<'a, ::std::sync::RwLock<#generics>, #generics>,
+                        ::locktree::PluggedRwLockReadGuard<'a, ::std::sync::RwLock<#generics>>,
                         #forward<'a>
                     ) {
                         (::locktree::RwLock::read(&#accessor.#name), #forward { locks: #accessor })
@@ -164,7 +163,7 @@ impl LockType {
                     pub fn #write_fn_name<'a>(
                         &'a mut self
                     ) -> (
-                        ::locktree::PluggedRwLockWriteGuard<'a, ::std::sync::RwLock<#generics>, #generics>,
+                        ::locktree::PluggedRwLockWriteGuard<'a, ::std::sync::RwLock<#generics>>,
                         #forward<'a>
                     ) {
                         (::locktree::RwLock::write(&#accessor.#name), #forward { locks: #accessor })
@@ -188,17 +187,6 @@ impl LockType {
     fn inner_type(&self) -> &TokenStream {
         match self {
             Self::Mutex(generics) | Self::RwLock(generics) => generics,
-        }
-    }
-
-    fn new_fn(&self) -> TokenStream {
-        match self {
-            Self::Mutex(_) => quote! {
-                ::locktree::Mutex::new
-            },
-            Self::RwLock(_) => quote! {
-                ::locktree::RwLock::new
-            },
         }
     }
 }

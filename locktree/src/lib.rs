@@ -148,34 +148,59 @@ mod plug;
 
 pub type PluggedGuard<'a, T> = <T as PlugLifetime<'a>>::Type;
 
-pub type PluggedMutexGuard<'a, T, G> = PluggedGuard<'a, <T as Mutex<G>>::Guard>;
+pub type PluggedMutexGuard<'a, T> = PluggedGuard<'a, <T as Mutex>::Guard>;
 
-pub type PluggedRwLockReadGuard<'a, T, G> =
-    PluggedGuard<'a, <T as RwLock<G>>::ReadGuard>;
+pub type PluggedRwLockReadGuard<'a, T> =
+    PluggedGuard<'a, <T as RwLock>::ReadGuard>;
 
-pub type PluggedRwLockWriteGuard<'a, T, G> =
-    PluggedGuard<'a, <T as RwLock<G>>::WriteGuard>;
+pub type PluggedRwLockWriteGuard<'a, T> =
+    PluggedGuard<'a, <T as RwLock>::WriteGuard>;
 
 #[cfg(feature = "async")]
 pub type PluggedAsyncGuard<'a, T> =
     Box<dyn Future<Output = <T as PlugLifetime<'a>>::Type> + 'a>;
 
-pub trait Mutex<T> {
+pub trait New<T> {
+    fn new(value: T) -> Self;
+}
+
+impl<T> New<T> for ::std::sync::Mutex<T> {
+    fn new(value: T) -> Self {
+        Self::new(value)
+    }
+}
+
+impl<T> New<T> for ::std::sync::RwLock<T> {
+    fn new(value: T) -> Self {
+        Self::new(value)
+    }
+}
+
+#[cfg(feature = "tokio")]
+impl<T> New<T> for ::tokio::sync::Mutex<T> {
+    fn new(value: T) -> Self {
+        Self::new(value)
+    }
+}
+
+#[cfg(feature = "tokio")]
+impl<T> New<T> for ::tokio::sync::RwLock<T> {
+    fn new(value: T) -> Self {
+        Self::new(value)
+    }
+}
+
+pub trait Mutex {
     type Guard: for<'a> PlugLifetime<'a>;
 
-    fn new(value: T) -> Self;
     fn lock(&self) -> PluggedGuard<Self::Guard>;
 }
 
-impl<T> Mutex<T> for std::sync::Mutex<T>
+impl<T> Mutex for std::sync::Mutex<T>
 where
     T: 'static,
 {
     type Guard = H1MutexLockGuard<T>;
-
-    fn new(value: T) -> Self {
-        Self::new(value)
-    }
 
     fn lock(&self) -> PluggedGuard<Self::Guard> {
         std::sync::Mutex::<T>::lock(self).unwrap()
@@ -183,48 +208,38 @@ where
 }
 
 #[cfg(feature = "async")]
-pub trait AsyncMutex<T> {
+pub trait AsyncMutex {
     type Guard: for<'a> PlugLifetime<'a>;
 
-    fn new(value: T) -> Self;
     fn lock(&self) -> PluggedAsyncGuard<Self::Guard>;
 }
 
 #[cfg(feature = "tokio")]
-impl<T> AsyncMutex<T> for tokio::sync::Mutex<T>
+impl<T> AsyncMutex for tokio::sync::Mutex<T>
 where
     T: 'static,
 {
     type Guard = H1TokioMutexLockGuard<T>;
-
-    fn new(value: T) -> Self {
-        Self::new(value)
-    }
 
     fn lock(&self) -> PluggedAsyncGuard<Self::Guard> {
         Box::new(tokio::sync::Mutex::<T>::lock(self))
     }
 }
 
-pub trait RwLock<T> {
+pub trait RwLock {
     type ReadGuard: for<'a> PlugLifetime<'a>;
     type WriteGuard: for<'a> PlugLifetime<'a>;
 
-    fn new(value: T) -> Self;
     fn read(&self) -> PluggedGuard<Self::ReadGuard>;
     fn write(&self) -> PluggedGuard<Self::WriteGuard>;
 }
 
-impl<T> RwLock<T> for std::sync::RwLock<T>
+impl<T> RwLock for std::sync::RwLock<T>
 where
     T: 'static,
 {
     type ReadGuard = H1RwLockReadGuard<T>;
     type WriteGuard = H1RwLockWriteGuard<T>;
-
-    fn new(value: T) -> Self {
-        Self::new(value)
-    }
 
     fn read(&self) -> PluggedGuard<Self::ReadGuard> {
         std::sync::RwLock::<T>::read(self).unwrap()
@@ -235,16 +250,12 @@ where
     }
 }
 
-impl<T> RwLock<T> for T
+impl<T> RwLock for T
 where
-    T: Mutex<T>,
+    T: Mutex,
 {
     type ReadGuard = T::Guard;
     type WriteGuard = T::Guard;
-
-    fn new(value: T) -> Self {
-        Self::new(value)
-    }
 
     fn read(&self) -> PluggedGuard<Self::ReadGuard> {
         self.lock()
@@ -256,26 +267,21 @@ where
 }
 
 #[cfg(feature = "async")]
-pub trait AsyncRwLock<T> {
+pub trait AsyncRwLock {
     type ReadGuard: for<'a> PlugLifetime<'a>;
     type WriteGuard: for<'a> PlugLifetime<'a>;
 
-    fn new(value: T) -> Self;
     fn read(&self) -> PluggedAsyncGuard<Self::ReadGuard>;
     fn write(&self) -> PluggedAsyncGuard<Self::WriteGuard>;
 }
 
 #[cfg(feature = "tokio")]
-impl<T> AsyncRwLock<T> for tokio::sync::RwLock<T>
+impl<T> AsyncRwLock for tokio::sync::RwLock<T>
 where
     T: 'static,
 {
     type ReadGuard = H1TokioRwLockReadGuard<T>;
     type WriteGuard = H1TokioRwLockWriteGuard<T>;
-
-    fn new(value: T) -> Self {
-        Self::new(value)
-    }
 
     fn read(&self) -> PluggedAsyncGuard<Self::ReadGuard> {
         Box::new(tokio::sync::RwLock::<T>::read(self))
@@ -287,16 +293,12 @@ where
 }
 
 #[cfg(feature = "async")]
-impl<T> AsyncRwLock<T> for T
+impl<T> AsyncRwLock for T
 where
-    T: AsyncMutex<T>,
+    T: AsyncMutex,
 {
     type ReadGuard = T::Guard;
     type WriteGuard = T::Guard;
-
-    fn new(value: T) -> Self {
-        Self::new(value)
-    }
 
     fn read(&self) -> PluggedAsyncGuard<Self::ReadGuard> {
         self.lock()

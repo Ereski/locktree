@@ -146,6 +146,8 @@ pub use locktree_derive::locktree;
 
 mod plug;
 
+pub type PluggedGuard<'a, T> = <T as PlugLifetime<'a>>::Type;
+
 #[cfg(feature = "async")]
 pub type PluggedAsyncGuard<'a, T> =
     Box<dyn Future<Output = <T as PlugLifetime<'a>>::Type> + 'a>;
@@ -153,7 +155,7 @@ pub type PluggedAsyncGuard<'a, T> =
 pub trait Mutex {
     type Guard: for<'a> PlugLifetime<'a>;
 
-    fn lock(&self) -> <Self::Guard as PlugLifetime>::Type;
+    fn lock(&self) -> PluggedGuard<Self::Guard>;
 }
 
 impl<T> Mutex for std::sync::Mutex<T>
@@ -162,8 +164,8 @@ where
 {
     type Guard = H1MutexLockGuard<T>;
 
-    fn lock(&self) -> <Self::Guard as PlugLifetime>::Type {
-        (self as &std::sync::Mutex<T>).lock().unwrap()
+    fn lock(&self) -> PluggedGuard<Self::Guard> {
+        std::sync::Mutex::<T>::lock(self).unwrap()
     }
 }
 
@@ -182,7 +184,7 @@ where
     type Guard = H1TokioMutexLockGuard<T>;
 
     fn lock(&self) -> PluggedAsyncGuard<Self::Guard> {
-        Box::new((self as &tokio::sync::Mutex<T>).lock())
+        Box::new(tokio::sync::Mutex::<T>::lock(self))
     }
 }
 
@@ -190,8 +192,8 @@ pub trait RwLock {
     type ReadGuard: for<'a> PlugLifetime<'a>;
     type WriteGuard: for<'a> PlugLifetime<'a>;
 
-    fn read(&self) -> <Self::ReadGuard as PlugLifetime>::Type;
-    fn write(&self) -> <Self::WriteGuard as PlugLifetime>::Type;
+    fn read(&self) -> PluggedGuard<Self::ReadGuard>;
+    fn write(&self) -> PluggedGuard<Self::WriteGuard>;
 }
 
 impl<T> RwLock for std::sync::RwLock<T>
@@ -201,12 +203,12 @@ where
     type ReadGuard = H1RwLockReadGuard<T>;
     type WriteGuard = H1RwLockWriteGuard<T>;
 
-    fn read(&self) -> <Self::ReadGuard as PlugLifetime>::Type {
-        (self as &std::sync::RwLock<T>).read().unwrap()
+    fn read(&self) -> PluggedGuard<Self::ReadGuard> {
+        std::sync::RwLock::<T>::read(self).unwrap()
     }
 
-    fn write(&self) -> <Self::WriteGuard as PlugLifetime>::Type {
-        (self as &std::sync::RwLock<T>).write().unwrap()
+    fn write(&self) -> PluggedGuard<Self::WriteGuard> {
+        std::sync::RwLock::<T>::write(self).unwrap()
     }
 }
 
@@ -217,11 +219,11 @@ where
     type ReadGuard = T::Guard;
     type WriteGuard = T::Guard;
 
-    fn read(&self) -> <Self::ReadGuard as PlugLifetime>::Type {
+    fn read(&self) -> PluggedGuard<Self::ReadGuard> {
         self.lock()
     }
 
-    fn write(&self) -> <Self::WriteGuard as PlugLifetime>::Type {
+    fn write(&self) -> PluggedGuard<Self::WriteGuard> {
         self.lock()
     }
 }
@@ -244,11 +246,11 @@ where
     type WriteGuard = H1TokioRwLockWriteGuard<T>;
 
     fn read(&self) -> PluggedAsyncGuard<Self::ReadGuard> {
-        Box::new((self as &tokio::sync::RwLock<T>).read())
+        Box::new(tokio::sync::RwLock::<T>::read(self))
     }
 
     fn write(&self) -> PluggedAsyncGuard<Self::WriteGuard> {
-        Box::new((self as &tokio::sync::RwLock<T>).write())
+        Box::new(tokio::sync::RwLock::<T>::write(self))
     }
 }
 

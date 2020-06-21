@@ -137,12 +137,18 @@
 //!
 //! TODO
 
+use crate::plug::*;
+#[cfg(feature = "async")]
+use std::future::Future;
+
 /// `locktree!` macro. See the module-level documentation for details.
 pub use locktree_derive::locktree;
 
 mod plug;
 
-use plug::*;
+#[cfg(feature = "async")]
+pub type PluggedAsyncGuard<'a, T> =
+    Box<dyn Future<Output = <T as PlugLifetime<'a>>::Type> + 'a>;
 
 pub trait Mutex {
     type Guard: for<'a> PlugLifetime<'a>;
@@ -158,6 +164,25 @@ where
 
     fn lock(&self) -> <Self::Guard as PlugLifetime>::Type {
         (self as &std::sync::Mutex<T>).lock().unwrap()
+    }
+}
+
+#[cfg(feature = "async")]
+pub trait AsyncMutex {
+    type Guard: for<'a> PlugLifetime<'a>;
+
+    fn lock(&self) -> PluggedAsyncGuard<Self::Guard>;
+}
+
+#[cfg(feature = "tokio")]
+impl<T> AsyncMutex for tokio::sync::Mutex<T>
+where
+    T: 'static,
+{
+    type Guard = H1TokioMutexLockGuard<T>;
+
+    fn lock(&self) -> PluggedAsyncGuard<Self::Guard> {
+        Box::new((self as &tokio::sync::Mutex<T>).lock())
     }
 }
 
@@ -197,6 +222,49 @@ where
     }
 
     fn write(&self) -> <Self::WriteGuard as PlugLifetime>::Type {
+        self.lock()
+    }
+}
+
+#[cfg(feature = "async")]
+pub trait AsyncRwLock {
+    type ReadGuard: for<'a> PlugLifetime<'a>;
+    type WriteGuard: for<'a> PlugLifetime<'a>;
+
+    fn read(&self) -> PluggedAsyncGuard<Self::ReadGuard>;
+    fn write(&self) -> PluggedAsyncGuard<Self::WriteGuard>;
+}
+
+#[cfg(feature = "tokio")]
+impl<T> AsyncRwLock for tokio::sync::RwLock<T>
+where
+    T: 'static,
+{
+    type ReadGuard = H1TokioRwLockReadGuard<T>;
+    type WriteGuard = H1TokioRwLockWriteGuard<T>;
+
+    fn read(&self) -> PluggedAsyncGuard<Self::ReadGuard> {
+        Box::new((self as &tokio::sync::RwLock<T>).read())
+    }
+
+    fn write(&self) -> PluggedAsyncGuard<Self::WriteGuard> {
+        Box::new((self as &tokio::sync::RwLock<T>).write())
+    }
+}
+
+#[cfg(feature = "async")]
+impl<T> AsyncRwLock for T
+where
+    T: AsyncMutex,
+{
+    type ReadGuard = T::Guard;
+    type WriteGuard = T::Guard;
+
+    fn read(&self) -> PluggedAsyncGuard<Self::ReadGuard> {
+        self.lock()
+    }
+
+    fn write(&self) -> PluggedAsyncGuard<Self::WriteGuard> {
         self.lock()
     }
 }

@@ -1,0 +1,18 @@
+[package]
+name = "locktree-derive"
+description = "Experimental compiler-checked deadlock-freedom (procmacro crate)"
+license = "MIT"
+version = "0.1.0"
+authors = ["Carol Schulze <carol@ereski.org>"]
+edition = "2018"
+
+[lib]
+proc-macro = true
+
+[dependencies]
+proc-macro2 = "1.0.18"
+quote = "1.0.7"
+syn = "1.0.32"
+
+[dev-dependencies]
+trybuild = "1.0.30"

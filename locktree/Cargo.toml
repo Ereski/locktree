@@ -1,0 +1,10 @@
+[package]
+name = "locktree"
+description = "Experimental compiler-checked deadlock-freedom"
+license = "MIT"
+version = "0.1.0"
+authors = ["Carol Schulze <carol@ereski.org>"]
+edition = "2018"
+
+[dependencies]
+locktree-derive = { version = "0.1.0", path = "../locktree-derive" }

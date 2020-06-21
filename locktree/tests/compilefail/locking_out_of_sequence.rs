@@ -1,4 +1,4 @@
-use locktree_derive::locktree;
+use locktree::locktree;
 
 locktree! {
     Main {

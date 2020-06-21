@@ -1,4 +1,4 @@
-use locktree_derive::locktree;
+use locktree::locktree;
 
 locktree! {
     Main {
@@ -8,7 +8,8 @@ locktree! {
 
 fn main() {
     let mut locks = MainLockTree::new(());
-    let _a = locks.lock_mutex();
-    // Invalid
+    {
+        let _a = locks.lock_mutex();
+    }
     let _b = locks.lock_mutex();
 }

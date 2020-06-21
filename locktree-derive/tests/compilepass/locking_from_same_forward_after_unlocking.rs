@@ -2,7 +2,7 @@ use locktree_derive::locktree;
 
 locktree! {
     Main {
-        mutex: StdMutex<()>
+        mutex: Mutex<()>
     }
 }
 

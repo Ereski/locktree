@@ -190,16 +190,16 @@ impl LockType {
 
 impl Parse for LockType {
     fn parse(input: ParseStream) -> Result<Self> {
-        custom_keyword!(StdMutex);
-        custom_keyword!(StdRwLock);
+        custom_keyword!(Mutex);
+        custom_keyword!(RwLock);
 
         let lookahead = input.lookahead1();
         let constructor: fn(TokenStream) -> Self;
-        if lookahead.peek(StdMutex) {
-            input.parse::<StdMutex>().unwrap();
+        if lookahead.peek(Mutex) {
+            input.parse::<Mutex>().unwrap();
             constructor = |generics| Self::Mutex(generics);
-        } else if lookahead.peek(StdRwLock) {
-            input.parse::<StdRwLock>().unwrap();
+        } else if lookahead.peek(RwLock) {
+            input.parse::<RwLock>().unwrap();
             constructor = |generics| Self::RwLock(generics);
         } else {
             return Err(lookahead.error());

@@ -27,7 +27,7 @@ fn should_handle_a_single_mutex() {
     compare_input_output(
         "
         Main {
-            mutex: StdMutex<()>
+            mutex: Mutex<()>
         }
         ",
         "
@@ -63,7 +63,7 @@ fn should_handle_a_single_rw_lock() {
     compare_input_output(
         "
         Main {
-            rw_lock: StdRwLock<()>
+            rw_lock: RwLock<()>
         }
         ",
         "
@@ -105,8 +105,8 @@ fn should_handle_two_locks() {
     compare_input_output(
         "
         Main {
-            mutex0: StdMutex<()>,
-            mutex1: StdMutex<()>,
+            mutex0: Mutex<()>,
+            mutex1: Mutex<()>,
         }
         ",
         "

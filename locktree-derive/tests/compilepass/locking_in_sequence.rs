@@ -2,8 +2,8 @@ use locktree_derive::locktree;
 
 locktree! {
     Main {
-        m0: StdMutex<()>,
-        m1: StdMutex<()>,
+        m0: Mutex<()>,
+        m1: Mutex<()>,
     }
 }
 

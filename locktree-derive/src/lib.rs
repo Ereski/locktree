@@ -131,8 +131,13 @@ impl LockType {
                 );
 
                 quote! {
-                    pub fn #lock_fn_name<'a>(&'a mut self) -> (::std::sync::MutexGuard<'a, #generics>, #forward<'a>) {
-                        (#accessor.#name.lock().unwrap(), #forward { locks: #accessor })
+                    pub fn #lock_fn_name<'a>(
+                        &'a mut self
+                    ) -> (
+                        ::locktree::PluggedMutexGuard<'a, ::std::sync::Mutex<#generics>, #generics>,
+                        #forward<'a>
+                    ) {
+                        (::locktree::Mutex::lock(&#accessor.#name), #forward { locks: #accessor })
                     }
                 }
             }
@@ -147,12 +152,22 @@ impl LockType {
                 );
 
                 quote! {
-                    pub fn #read_fn_name<'a>(&'a mut self) -> (::std::sync::RwLockReadGuard<'a, #generics>, #forward<'a>) {
-                        (#accessor.#name.read().unwrap(), #forward { locks: #accessor })
+                    pub fn #read_fn_name<'a>(
+                        &'a mut self
+                    ) -> (
+                        ::locktree::PluggedRwLockReadGuard<'a, ::std::sync::RwLock<#generics>, #generics>,
+                        #forward<'a>
+                    ) {
+                        (::locktree::RwLock::read(&#accessor.#name), #forward { locks: #accessor })
                     }
 
-                    pub fn #write_fn_name<'a>(&'a mut self) -> (::std::sync::RwLockWriteGuard<'a, #generics>, #forward<'a>) {
-                        (#accessor.#name.write().unwrap(), #forward { locks: #accessor })
+                    pub fn #write_fn_name<'a>(
+                        &'a mut self
+                    ) -> (
+                        ::locktree::PluggedRwLockWriteGuard<'a, ::std::sync::RwLock<#generics>, #generics>,
+                        #forward<'a>
+                    ) {
+                        (::locktree::RwLock::write(&#accessor.#name), #forward { locks: #accessor })
                     }
                 }
             }
@@ -179,10 +194,10 @@ impl LockType {
     fn new_fn(&self) -> TokenStream {
         match self {
             Self::Mutex(_) => quote! {
-                ::std::sync::Mutex::new
+                ::locktree::Mutex::new
             },
             Self::RwLock(_) => quote! {
-                ::std::sync::RwLock::new
+                ::locktree::RwLock::new
             },
         }
     }

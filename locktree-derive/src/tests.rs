@@ -38,14 +38,17 @@ fn should_handle_a_single_mutex() {
         impl MainLockTree {
             pub fn new(mutex_value: ()) -> Self {
                 Self {
-                    mutex: ::std::sync::Mutex::new(mutex_value),
+                    mutex: ::locktree::Mutex::new(mutex_value),
                 }
             }
 
             pub fn lock_mutex<'a>(
                 &'a mut self
-            ) -> (::std::sync::MutexGuard<'a, ()>, MainLockTreeMutex<'a>) {
-                (self.mutex.lock().unwrap(), MainLockTreeMutex { locks: self })
+            ) -> (
+                ::locktree::PluggedMutexGuard<'a, ::std::sync::Mutex<()>, ()>,
+                MainLockTreeMutex<'a>
+            ) {
+                (::locktree::Mutex::lock(&self.mutex), MainLockTreeMutex { locks: self })
             }
         }
 
@@ -74,20 +77,26 @@ fn should_handle_a_single_rw_lock() {
         impl MainLockTree {
             pub fn new(rw_lock_value: ()) -> Self {
                 Self {
-                    rw_lock: ::std::sync::RwLock::new(rw_lock_value),
+                    rw_lock: ::locktree::RwLock::new(rw_lock_value),
                 }
             }
 
             pub fn read_rw_lock<'a>(
                 &'a mut self
-            ) -> (::std::sync::RwLockReadGuard<'a, ()>, MainLockTreeRwLock<'a>) {
-                (self.rw_lock.read().unwrap(), MainLockTreeRwLock { locks: self })
+            ) -> (
+                ::locktree::PluggedRwLockReadGuard<'a, ::std::sync::RwLock<()>, ()>,
+                MainLockTreeRwLock<'a>
+            ) {
+                (::locktree::RwLock::read(&self.rw_lock), MainLockTreeRwLock { locks: self })
             }
 
             pub fn write_rw_lock<'a>(
                 &'a mut self
-            ) -> (::std::sync::RwLockWriteGuard<'a, ()>, MainLockTreeRwLock<'a>) {
-                (self.rw_lock.write().unwrap(), MainLockTreeRwLock { locks: self })
+            ) -> (
+                ::locktree::PluggedRwLockWriteGuard<'a, ::std::sync::RwLock<()>, ()>,
+                MainLockTreeRwLock<'a>
+            ) {
+                (::locktree::RwLock::write(&self.rw_lock), MainLockTreeRwLock { locks: self })
             }
         }
 
@@ -118,21 +127,27 @@ fn should_handle_two_locks() {
         impl MainLockTree {
             pub fn new(mutex0_value: (), mutex1_value: ()) -> Self {
                 Self {
-                    mutex0: ::std::sync::Mutex::new(mutex0_value),
-                    mutex1: ::std::sync::Mutex::new(mutex1_value),
+                    mutex0: ::locktree::Mutex::new(mutex0_value),
+                    mutex1: ::locktree::Mutex::new(mutex1_value),
                 }
             }
 
             pub fn lock_mutex0<'a>(
                 &'a mut self
-            ) -> (::std::sync::MutexGuard<'a, ()>, MainLockTreeMutex0<'a>) {
-                (self.mutex0.lock().unwrap(), MainLockTreeMutex0 { locks: self })
+            ) -> (
+                ::locktree::PluggedMutexGuard<'a, ::std::sync::Mutex<()>, ()>,
+                MainLockTreeMutex0<'a>
+            ) {
+                (::locktree::Mutex::lock(&self.mutex0), MainLockTreeMutex0 { locks: self })
             }
 
             pub fn lock_mutex1<'a>(
                 &'a mut self
-            ) -> (::std::sync::MutexGuard<'a, ()>, MainLockTreeMutex1<'a>) {
-                (self.mutex1.lock().unwrap(), MainLockTreeMutex1 { locks: self })
+            ) -> (
+                ::locktree::PluggedMutexGuard<'a, ::std::sync::Mutex<()>, ()>,
+                MainLockTreeMutex1<'a>
+            ) {
+                (::locktree::Mutex::lock(&self.mutex1), MainLockTreeMutex1 { locks: self })
             }
         }
 
@@ -143,8 +158,11 @@ fn should_handle_two_locks() {
         impl<'b> MainLockTreeMutex0<'b> {
             pub fn lock_mutex1<'a>(
                 &'a mut self
-            ) -> (::std::sync::MutexGuard<'a, ()>, MainLockTreeMutex1<'a>) {
-                (self.locks.mutex1.lock().unwrap(), MainLockTreeMutex1 { locks: self.locks })
+            ) -> (
+                ::locktree::PluggedMutexGuard<'a, ::std::sync::Mutex<()>, ()>,
+                MainLockTreeMutex1<'a>
+            ) {
+                (::locktree::Mutex::lock(&self.locks.mutex1), MainLockTreeMutex1 { locks: self.locks })
             }
         }
 

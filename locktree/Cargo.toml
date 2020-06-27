@@ -7,7 +7,7 @@ authors = ["Carol Schulze <carol@ereski.org>"]
 edition = "2018"
 
 [features]
-default = ['async', 'tokio_0_2']
+default = ['async']
 async = []
 tokio_0_2 = ['tokio']
 

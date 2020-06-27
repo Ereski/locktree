@@ -7,10 +7,11 @@ use proc_macro2::TokenStream;
 use quote::{quote, ToTokens};
 use std::collections::HashMap;
 use syn::{
-    braced, custom_keyword,
+    braced, custom_keyword, parenthesized,
     parse::{Parse, ParseStream, Result},
     punctuated::Punctuated,
-    AngleBracketedGenericArguments, Ident, Token,
+    token::Paren,
+    AngleBracketedGenericArguments, Ident, Path, Token,
 };
 
 struct LockTree {
@@ -60,7 +61,7 @@ impl Lock {
             &format!("{}_value", &self.name),
             proc_macro2::Span::call_site(),
         );
-        let inner_type = self.ty.inner_type();
+        let generics = self.ty.generics();
 
         Fragment {
             main_accessors: self
@@ -74,7 +75,7 @@ impl Lock {
                 #name: #type_declaraction,
             },
             init_arg: quote! {
-                #init_var: #inner_type
+                #init_var: #generics
             },
             init_statement: quote! {
                 #name: ::locktree::New::new(#init_var),
@@ -97,9 +98,10 @@ impl Parse for Lock {
     }
 }
 
-enum LockType {
-    Mutex(TokenStream),
-    RwLock(TokenStream),
+struct LockType {
+    declaration: TokenStream,
+    generics: TokenStream,
+    interface: LockInterface,
 }
 
 impl LockType {
@@ -122,8 +124,77 @@ impl LockType {
                 self.locks
             }
         };
+
+        self.interface.accessor_functions(
+            &name,
+            &forward,
+            &accessor,
+            &self.declaration,
+        )
+    }
+
+    fn declaration(&self) -> &TokenStream {
+        &self.declaration
+    }
+
+    fn generics(&self) -> &TokenStream {
+        &self.generics
+    }
+}
+
+impl Parse for LockType {
+    fn parse(input: ParseStream) -> Result<Self> {
+        let interface = input.parse::<LockInterface>()?;
+        let hkt = if input.peek(Paren) {
+            let hkt;
+            parenthesized!(hkt in input);
+
+            hkt.parse::<Path>()?.into_token_stream()
+        } else {
+            interface.default_concrete_type()
+        };
+        let generics = input
+            .parse::<AngleBracketedGenericArguments>()?
+            .args
+            .to_token_stream();
+
+        Ok(Self {
+            declaration: quote! {
+                #hkt<#generics>
+            },
+            generics,
+            interface,
+        })
+    }
+}
+
+#[derive(Clone, Copy)]
+enum LockInterface {
+    Mutex,
+    RwLock,
+}
+
+impl LockInterface {
+    fn default_concrete_type(&self) -> TokenStream {
         match self {
-            Self::Mutex(generics) => {
+            Self::Mutex => quote! {
+                ::std::sync::Mutex
+            },
+            Self::RwLock => quote! {
+                ::std::sync::RwLock
+            },
+        }
+    }
+
+    fn accessor_functions(
+        &self,
+        name: &proc_macro2::Ident,
+        forward: &proc_macro2::Ident,
+        accessor: &TokenStream,
+        declaration: &TokenStream,
+    ) -> TokenStream {
+        match self {
+            Self::Mutex => {
                 let lock_fn_name = proc_macro2::Ident::new(
                     &format!("lock_{}", name),
                     proc_macro2::Span::call_site(),
@@ -133,14 +204,14 @@ impl LockType {
                     pub fn #lock_fn_name<'a>(
                         &'a mut self
                     ) -> (
-                        ::locktree::PluggedMutexGuard<'a, ::std::sync::Mutex<#generics>>,
+                        ::locktree::PluggedMutexGuard<'a, #declaration>,
                         #forward<'a>
                     ) {
                         (::locktree::Mutex::lock(&#accessor.#name), #forward { locks: #accessor })
                     }
                 }
             }
-            Self::RwLock(generics) => {
+            Self::RwLock => {
                 let read_fn_name = proc_macro2::Ident::new(
                     &format!("read_{}", name),
                     proc_macro2::Span::call_site(),
@@ -154,7 +225,7 @@ impl LockType {
                     pub fn #read_fn_name<'a>(
                         &'a mut self
                     ) -> (
-                        ::locktree::PluggedRwLockReadGuard<'a, ::std::sync::RwLock<#generics>>,
+                        ::locktree::PluggedRwLockReadGuard<'a, #declaration>,
                         #forward<'a>
                     ) {
                         (::locktree::RwLock::read(&#accessor.#name), #forward { locks: #accessor })
@@ -163,7 +234,7 @@ impl LockType {
                     pub fn #write_fn_name<'a>(
                         &'a mut self
                     ) -> (
-                        ::locktree::PluggedRwLockWriteGuard<'a, ::std::sync::RwLock<#generics>>,
+                        ::locktree::PluggedRwLockWriteGuard<'a, #declaration>,
                         #forward<'a>
                     ) {
                         (::locktree::RwLock::write(&#accessor.#name), #forward { locks: #accessor })
@@ -172,47 +243,25 @@ impl LockType {
             }
         }
     }
-
-    fn declaration(&self) -> TokenStream {
-        match self {
-            Self::Mutex(generics) => quote! {
-                ::std::sync::Mutex<#generics>
-            },
-            Self::RwLock(generics) => quote! {
-                ::std::sync::RwLock<#generics>
-            },
-        }
-    }
-
-    fn inner_type(&self) -> &TokenStream {
-        match self {
-            Self::Mutex(generics) | Self::RwLock(generics) => generics,
-        }
-    }
 }
 
-impl Parse for LockType {
+impl Parse for LockInterface {
     fn parse(input: ParseStream) -> Result<Self> {
         custom_keyword!(Mutex);
         custom_keyword!(RwLock);
 
         let lookahead = input.lookahead1();
-        let constructor: fn(TokenStream) -> Self;
         if lookahead.peek(Mutex) {
             input.parse::<Mutex>().unwrap();
-            constructor = |generics| Self::Mutex(generics);
+
+            Ok(Self::Mutex)
         } else if lookahead.peek(RwLock) {
             input.parse::<RwLock>().unwrap();
-            constructor = |generics| Self::RwLock(generics);
-        } else {
-            return Err(lookahead.error());
-        }
-        let generics = input
-            .parse::<AngleBracketedGenericArguments>()?
-            .args
-            .to_token_stream();
 
-        Ok(constructor(generics))
+            Ok(Self::RwLock)
+        } else {
+            Err(lookahead.error())
+        }
     }
 }
 

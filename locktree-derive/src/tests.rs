@@ -1,6 +1,6 @@
 use crate::locktree_impl;
-use proc_macro2::TokenStream;
 use pretty_assertions::assert_eq;
+use proc_macro2::TokenStream;
 
 #[test]
 fn should_output_nothing_with_empty_input() {
@@ -63,6 +63,45 @@ fn should_handle_a_single_mutex() {
 }
 
 #[test]
+fn should_handle_a_mutex_with_an_explicit_hkt() {
+    compare_input_output(
+        "
+        Main {
+            mutex: Mutex(SuperMutex)<()>
+        }
+        ",
+        "
+        struct MainLockTree {
+            mutex: SuperMutex<()>,
+        }
+
+        impl MainLockTree {
+            pub fn new(mutex_value: ()) -> Self {
+                Self {
+                    mutex: ::locktree::New::new(mutex_value),
+                }
+            }
+
+            pub fn lock_mutex<'a>(
+                &'a mut self
+            ) -> (
+                ::locktree::PluggedMutexGuard<'a, SuperMutex<()>>,
+                MainLockTreeMutex<'a>
+            ) {
+                (::locktree::Mutex::lock(&self.mutex), MainLockTreeMutex { locks: self })
+            }
+        }
+
+        struct MainLockTreeMutex<'b> {
+            locks: &'b MainLockTree
+        }
+
+        impl<'b> MainLockTreeMutex<'b> {}
+        ",
+    );
+}
+
+#[test]
 fn should_handle_a_single_rw_lock() {
     compare_input_output(
         "
@@ -95,6 +134,54 @@ fn should_handle_a_single_rw_lock() {
                 &'a mut self
             ) -> (
                 ::locktree::PluggedRwLockWriteGuard<'a, ::std::sync::RwLock<()>>,
+                MainLockTreeRwLock<'a>
+            ) {
+                (::locktree::RwLock::write(&self.rw_lock), MainLockTreeRwLock { locks: self })
+            }
+        }
+
+        struct MainLockTreeRwLock<'b> {
+            locks: &'b MainLockTree
+        }
+
+        impl<'b> MainLockTreeRwLock<'b> {}
+        ",
+    );
+}
+
+#[test]
+fn should_handle_an_rw_lock_with_an_explicit_hkt() {
+    compare_input_output(
+        "
+        Main {
+            rw_lock: RwLock(SuperRwLock)<()>
+        }
+        ",
+        "
+        struct MainLockTree {
+            rw_lock: SuperRwLock<()>,
+        }
+
+        impl MainLockTree {
+            pub fn new(rw_lock_value: ()) -> Self {
+                Self {
+                    rw_lock: ::locktree::New::new(rw_lock_value),
+                }
+            }
+
+            pub fn read_rw_lock<'a>(
+                &'a mut self
+            ) -> (
+                ::locktree::PluggedRwLockReadGuard<'a, SuperRwLock<()>>,
+                MainLockTreeRwLock<'a>
+            ) {
+                (::locktree::RwLock::read(&self.rw_lock), MainLockTreeRwLock { locks: self })
+            }
+
+            pub fn write_rw_lock<'a>(
+                &'a mut self
+            ) -> (
+                ::locktree::PluggedRwLockWriteGuard<'a, SuperRwLock<()>>,
                 MainLockTreeRwLock<'a>
             ) {
                 (::locktree::RwLock::write(&self.rw_lock), MainLockTreeRwLock { locks: self })
@@ -181,10 +268,12 @@ fn compare_input_output(input: &str, output: &str) {
         locktree_impl(syn::parse_str(input).unwrap())
             .to_string()
             .replace(" '", "'")
-            .replace(" ,", ","),
+            .replace(" ,", ",")
+            .replace(" >", ">"),
         syn::parse_str::<TokenStream>(output)
             .unwrap()
             .to_string()
             .replace(" ,", ",")
+            .replace(" >", ">")
     );
 }

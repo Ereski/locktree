@@ -7,8 +7,9 @@ authors = ["Carol Schulze <carol@ereski.org>"]
 edition = "2018"
 
 [features]
-default = ['async']
+default = ['async', 'tokio_0_2']
 async = []
+tokio_0_2 = ['tokio']
 
 [dependencies]
 locktree-derive = { version = "0.1", path = "../locktree-derive" }
@@ -16,4 +17,5 @@ locktree-derive = { version = "0.1", path = "../locktree-derive" }
 tokio = { version = "0.2", default-features = false, features = ['sync'], optional = true }
 
 [dev-dependencies]
+tokio = { version = "0.2", default-features = false, features = ['macros', 'rt-threaded', 'sync'] }
 trybuild = "1.0"

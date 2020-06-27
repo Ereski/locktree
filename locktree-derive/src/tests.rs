@@ -102,6 +102,45 @@ fn should_handle_a_mutex_with_an_explicit_hkt() {
 }
 
 #[test]
+fn should_handle_an_async_mutex() {
+    compare_input_output(
+        "
+        Main {
+            mutex: async Mutex(SuperMutex)<()>
+        }
+        ",
+        "
+        struct MainLockTree {
+            mutex: SuperMutex<()>,
+        }
+
+        impl MainLockTree {
+            pub fn new(mutex_value: ()) -> Self {
+                Self {
+                    mutex: ::locktree::New::new(mutex_value),
+                }
+            }
+
+            pub fn lock_mutex<'a>(
+                &'a mut self
+            ) -> (
+                ::locktree::PluggedAsyncMutexGuard<'a, SuperMutex<()>>,
+                MainLockTreeMutex<'a>
+            ) {
+                (::locktree::AsyncMutex::lock(&self.mutex), MainLockTreeMutex { locks: self })
+            }
+        }
+
+        struct MainLockTreeMutex<'b> {
+            locks: &'b MainLockTree
+        }
+
+        impl<'b> MainLockTreeMutex<'b> {}
+        ",
+    );
+}
+
+#[test]
 fn should_handle_a_single_rw_lock() {
     compare_input_output(
         "
@@ -185,6 +224,54 @@ fn should_handle_an_rw_lock_with_an_explicit_hkt() {
                 MainLockTreeRwLock<'a>
             ) {
                 (::locktree::RwLock::write(&self.rw_lock), MainLockTreeRwLock { locks: self })
+            }
+        }
+
+        struct MainLockTreeRwLock<'b> {
+            locks: &'b MainLockTree
+        }
+
+        impl<'b> MainLockTreeRwLock<'b> {}
+        ",
+    );
+}
+
+#[test]
+fn should_handle_an_async_rw_lock() {
+    compare_input_output(
+        "
+        Main {
+            rw_lock: async RwLock(SuperRwLock)<()>
+        }
+        ",
+        "
+        struct MainLockTree {
+            rw_lock: SuperRwLock<()>,
+        }
+
+        impl MainLockTree {
+            pub fn new(rw_lock_value: ()) -> Self {
+                Self {
+                    rw_lock: ::locktree::New::new(rw_lock_value),
+                }
+            }
+
+            pub fn read_rw_lock<'a>(
+                &'a mut self
+            ) -> (
+                ::locktree::PluggedAsyncRwLockReadGuard<'a, SuperRwLock<()>>,
+                MainLockTreeRwLock<'a>
+            ) {
+                (::locktree::AsyncRwLock::read(&self.rw_lock), MainLockTreeRwLock { locks: self })
+            }
+
+            pub fn write_rw_lock<'a>(
+                &'a mut self
+            ) -> (
+                ::locktree::PluggedAsyncRwLockWriteGuard<'a, SuperRwLock<()>>,
+                MainLockTreeRwLock<'a>
+            ) {
+                (::locktree::AsyncRwLock::write(&self.rw_lock), MainLockTreeRwLock { locks: self })
             }
         }
 

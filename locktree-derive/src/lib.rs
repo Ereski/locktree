@@ -99,6 +99,7 @@ impl Parse for Lock {
 }
 
 struct LockType {
+    is_async: bool,
     declaration: TokenStream,
     generics: TokenStream,
     interface: LockInterface,
@@ -126,6 +127,7 @@ impl LockType {
         };
 
         self.interface.accessor_functions(
+            self.is_async,
             &name,
             &forward,
             &accessor,
@@ -144,6 +146,11 @@ impl LockType {
 
 impl Parse for LockType {
     fn parse(input: ParseStream) -> Result<Self> {
+        let is_async = input.peek(Token![async]);
+        if is_async {
+            input.parse::<Token![async]>().unwrap();
+        }
+
         let interface = input.parse::<LockInterface>()?;
         let hkt = if input.peek(Paren) {
             let hkt;
@@ -151,6 +158,13 @@ impl Parse for LockType {
 
             hkt.parse::<Path>()?.into_token_stream()
         } else {
+            if is_async {
+                return Err(syn::Error::new(
+                    input.span(),
+                    "async locks must have an explicit HKT",
+                ));
+            }
+
             interface.default_concrete_type()
         };
         let generics = input
@@ -159,6 +173,7 @@ impl Parse for LockType {
             .to_token_stream();
 
         Ok(Self {
+            is_async,
             declaration: quote! {
                 #hkt<#generics>
             },
@@ -188,6 +203,7 @@ impl LockInterface {
 
     fn accessor_functions(
         &self,
+        is_async: bool,
         name: &proc_macro2::Ident,
         forward: &proc_macro2::Ident,
         accessor: &TokenStream,
@@ -199,15 +215,24 @@ impl LockInterface {
                     &format!("lock_{}", name),
                     proc_macro2::Span::call_site(),
                 );
+                let async_keyword = if is_async { "Async" } else { "" };
+                let guard = proc_macro2::Ident::new(
+                    &format!("Plugged{}MutexGuard", async_keyword),
+                    proc_macro2::Span::call_site(),
+                );
+                let lock = proc_macro2::Ident::new(
+                    &format!("{}Mutex", async_keyword),
+                    proc_macro2::Span::call_site(),
+                );
 
                 quote! {
                     pub fn #lock_fn_name<'a>(
                         &'a mut self
                     ) -> (
-                        ::locktree::PluggedMutexGuard<'a, #declaration>,
+                        ::locktree::#guard<'a, #declaration>,
                         #forward<'a>
                     ) {
-                        (::locktree::Mutex::lock(&#accessor.#name), #forward { locks: #accessor })
+                        (::locktree::#lock::lock(&#accessor.#name), #forward { locks: #accessor })
                     }
                 }
             }
@@ -220,24 +245,37 @@ impl LockInterface {
                     &format!("write_{}", name),
                     proc_macro2::Span::call_site(),
                 );
+                let async_keyword = if is_async { "Async" } else { "" };
+                let read_guard = proc_macro2::Ident::new(
+                    &format!("Plugged{}RwLockReadGuard", async_keyword),
+                    proc_macro2::Span::call_site(),
+                );
+                let write_guard = proc_macro2::Ident::new(
+                    &format!("Plugged{}RwLockWriteGuard", async_keyword),
+                    proc_macro2::Span::call_site(),
+                );
+                let lock = proc_macro2::Ident::new(
+                    &format!("{}RwLock", async_keyword),
+                    proc_macro2::Span::call_site(),
+                );
 
                 quote! {
                     pub fn #read_fn_name<'a>(
                         &'a mut self
                     ) -> (
-                        ::locktree::PluggedRwLockReadGuard<'a, #declaration>,
+                        ::locktree::#read_guard<'a, #declaration>,
                         #forward<'a>
                     ) {
-                        (::locktree::RwLock::read(&#accessor.#name), #forward { locks: #accessor })
+                        (::locktree::#lock::read(&#accessor.#name), #forward { locks: #accessor })
                     }
 
                     pub fn #write_fn_name<'a>(
                         &'a mut self
                     ) -> (
-                        ::locktree::PluggedRwLockWriteGuard<'a, #declaration>,
+                        ::locktree::#write_guard<'a, #declaration>,
                         #forward<'a>
                     ) {
-                        (::locktree::RwLock::write(&#accessor.#name), #forward { locks: #accessor })
+                        (::locktree::#lock::write(&#accessor.#name), #forward { locks: #accessor })
                     }
                 }
             }

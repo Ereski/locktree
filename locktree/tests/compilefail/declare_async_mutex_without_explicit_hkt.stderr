@@ -1,0 +1,11 @@
+error: proc macro panicked
+ --> $DIR/declare_async_mutex_without_explicit_hkt.rs:3:1
+  |
+3 | / locktree! {
+4 | |     Main {
+5 | |         mutex: async Mutex<()>
+6 | |     }
+7 | | }
+  | |_^
+  |
+  = help: message: called `Result::unwrap()` on an `Err` value: Error("async locks must have an explicit HKT")

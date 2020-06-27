@@ -140,6 +140,7 @@
 use crate::plug::*;
 #[cfg(feature = "async")]
 use std::future::Future;
+use std::pin::Pin;
 
 /// `locktree!` macro. See the module-level documentation for details.
 pub use locktree_derive::locktree;
@@ -158,7 +159,19 @@ pub type PluggedRwLockWriteGuard<'a, T> =
 
 #[cfg(feature = "async")]
 pub type PluggedAsyncGuard<'a, T> =
-    Box<dyn Future<Output = <T as PlugLifetime<'a>>::Type> + 'a>;
+    Pin<Box<dyn Future<Output = <T as PlugLifetime<'a>>::Type> + 'a>>;
+
+#[cfg(feature = "async")]
+pub type PluggedAsyncMutexGuard<'a, T> =
+    PluggedAsyncGuard<'a, <T as AsyncMutex>::Guard>;
+
+#[cfg(feature = "async")]
+pub type PluggedAsyncRwLockReadGuard<'a, T> =
+    PluggedAsyncGuard<'a, <T as AsyncRwLock>::ReadGuard>;
+
+#[cfg(feature = "async")]
+pub type PluggedAsyncRwLockWriteGuard<'a, T> =
+    PluggedAsyncGuard<'a, <T as AsyncRwLock>::WriteGuard>;
 
 pub trait New<T> {
     fn new(value: T) -> Self;
@@ -222,7 +235,7 @@ where
     type Guard = H1TokioMutexLockGuard<T>;
 
     fn lock(&self) -> PluggedAsyncGuard<Self::Guard> {
-        Box::new(tokio::sync::Mutex::<T>::lock(self))
+        Box::pin(tokio::sync::Mutex::<T>::lock(self))
     }
 }
 
@@ -284,11 +297,11 @@ where
     type WriteGuard = H1TokioRwLockWriteGuard<T>;
 
     fn read(&self) -> PluggedAsyncGuard<Self::ReadGuard> {
-        Box::new(tokio::sync::RwLock::<T>::read(self))
+        Box::pin(tokio::sync::RwLock::<T>::read(self))
     }
 
     fn write(&self) -> PluggedAsyncGuard<Self::WriteGuard> {
-        Box::new(tokio::sync::RwLock::<T>::write(self))
+        Box::pin(tokio::sync::RwLock::<T>::write(self))
     }
 }
 

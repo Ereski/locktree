@@ -1,5 +1,6 @@
 use crate::locktree_impl;
 use proc_macro2::TokenStream;
+use pretty_assertions::assert_eq;
 
 #[test]
 fn should_output_nothing_with_empty_input() {

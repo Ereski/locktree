@@ -13,3 +13,6 @@ proc-macro = true
 proc-macro2 = "1.0.18"
 quote = "1.0.7"
 syn = "1.0.32"
+
+[dev-dependencies]
+pretty_assertions = "0.6.1"

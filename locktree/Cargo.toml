@@ -11,9 +11,9 @@ default = ['async']
 async = []
 
 [dependencies]
-locktree-derive = { version = "0.1.0", path = "../locktree-derive" }
+locktree-derive = { version = "0.1", path = "../locktree-derive" }
 
-tokio = { version = "0.2.21", default-features = false, features = ['sync'], optional = true }
+tokio = { version = "0.2", default-features = false, features = ['sync'], optional = true }
 
 [dev-dependencies]
-trybuild = "1.0.30"
+trybuild = "1.0"

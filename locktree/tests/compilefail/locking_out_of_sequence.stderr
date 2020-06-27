@@ -1,8 +1,8 @@
-error[E0599]: no method named `lock_m0` found for struct `MainLockTreeM1<'_>` in the current scope
-  --> $DIR/locking_out_of_sequence.rs:13:22
+error[E0599]: no method named `lock_m1` found for struct `MainLockTreeM2<'_>` in the current scope
+  --> $DIR/locking_out_of_sequence.rs:16:23
    |
 3  | locktree! {
-   | --------- method `lock_m0` not found for this
+   | --------- method `lock_m1` not found for this
 ...
-13 |     let _b = forward.lock_m0();
-   |                      ^^^^^^^ method not found in `MainLockTreeM1<'_>`
+16 |     let _ = forward_b.lock_m1();
+   |                       ^^^^^^^ method not found in `MainLockTreeM2<'_>`

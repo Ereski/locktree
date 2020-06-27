@@ -7,6 +7,6 @@ locktree! {
 }
 
 fn main() {
-    let mut locks = MainLockTree::new(());
+    let locks = MainLockTree::new(());
     let _ = locks.lock_mutex();
 }

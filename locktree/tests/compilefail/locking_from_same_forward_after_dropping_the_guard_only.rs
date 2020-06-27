@@ -2,14 +2,15 @@ use locktree::locktree;
 
 locktree! {
     Main {
-        mutex: Mutex<()>
+        m0: Mutex<()>,
+        m1: Mutex<()>,
     }
 }
 
 fn main() {
-    let mut locks = MainLockTree::new(());
-    let _a = locks.lock_mutex().1;
+    let locks = MainLockTree::new((), ());
+    let (_a, mut forward_a) = locks.lock_m0();
+    let _b = forward_a.lock_m1().1;
     // Invalid
-    45
-    let _b = locks.lock_mutex();
+    let _ = forward_a.lock_m1();
 }

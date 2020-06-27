@@ -1,10 +1,10 @@
-error[E0499]: cannot borrow `locks` as mutable more than once at a time
-  --> $DIR/locking_from_same_forward_twice.rs:13:14
+error[E0499]: cannot borrow `forward_a` as mutable more than once at a time
+  --> $DIR/locking_from_same_forward_twice.rs:15:13
    |
-11 |     let _a = locks.lock_mutex();
-   |              ----- first mutable borrow occurs here
-12 |     // Invalid
-13 |     let _b = locks.lock_mutex();
-   |              ^^^^^ second mutable borrow occurs here
-14 | }
-   | - first borrow might be used here, when `_a` is dropped and runs the destructor for type `(std::sync::MutexGuard<'_, ()>, MainLockTreeMutex<'_>)`
+13 |     let _b = forward_a.lock_m1();
+   |              --------- first mutable borrow occurs here
+14 |     // Invalid
+15 |     let _ = forward_a.lock_m1();
+   |             ^^^^^^^^^ second mutable borrow occurs here
+16 | }
+   | - first borrow might be used here, when `_b` is dropped and runs the destructor for type `(std::sync::MutexGuard<'_, ()>, MainLockTreeM1<'_>)`

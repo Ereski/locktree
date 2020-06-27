@@ -9,7 +9,7 @@ locktree! {
 
 #[tokio::main]
 async fn main() {
-    let mut locks = MainLockTree::new(());
+    let locks = MainLockTree::new(());
     {
         let _ = locks.read_rw_lock().0.await;
     }

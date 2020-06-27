@@ -44,7 +44,7 @@ fn should_handle_a_single_mutex() {
             }
 
             pub fn lock_mutex<'a>(
-                &'a mut self
+                &'a self
             ) -> (
                 ::locktree::PluggedMutexGuard<'a, ::std::sync::Mutex<()>>,
                 MainLockTreeMutex<'a>
@@ -83,7 +83,7 @@ fn should_handle_a_mutex_with_an_explicit_hkt() {
             }
 
             pub fn lock_mutex<'a>(
-                &'a mut self
+                &'a self
             ) -> (
                 ::locktree::PluggedMutexGuard<'a, SuperMutex<()>>,
                 MainLockTreeMutex<'a>
@@ -122,7 +122,7 @@ fn should_handle_an_async_mutex() {
             }
 
             pub fn lock_mutex<'a>(
-                &'a mut self
+                &'a self
             ) -> (
                 ::locktree::PluggedAsyncMutexGuard<'a, SuperMutex<()>>,
                 MainLockTreeMutex<'a>
@@ -161,7 +161,7 @@ fn should_handle_a_single_rw_lock() {
             }
 
             pub fn read_rw_lock<'a>(
-                &'a mut self
+                &'a self
             ) -> (
                 ::locktree::PluggedRwLockReadGuard<'a, ::std::sync::RwLock<()>>,
                 MainLockTreeRwLock<'a>
@@ -170,7 +170,7 @@ fn should_handle_a_single_rw_lock() {
             }
 
             pub fn write_rw_lock<'a>(
-                &'a mut self
+                &'a self
             ) -> (
                 ::locktree::PluggedRwLockWriteGuard<'a, ::std::sync::RwLock<()>>,
                 MainLockTreeRwLock<'a>
@@ -209,7 +209,7 @@ fn should_handle_an_rw_lock_with_an_explicit_hkt() {
             }
 
             pub fn read_rw_lock<'a>(
-                &'a mut self
+                &'a self
             ) -> (
                 ::locktree::PluggedRwLockReadGuard<'a, SuperRwLock<()>>,
                 MainLockTreeRwLock<'a>
@@ -218,7 +218,7 @@ fn should_handle_an_rw_lock_with_an_explicit_hkt() {
             }
 
             pub fn write_rw_lock<'a>(
-                &'a mut self
+                &'a self
             ) -> (
                 ::locktree::PluggedRwLockWriteGuard<'a, SuperRwLock<()>>,
                 MainLockTreeRwLock<'a>
@@ -257,7 +257,7 @@ fn should_handle_an_async_rw_lock() {
             }
 
             pub fn read_rw_lock<'a>(
-                &'a mut self
+                &'a self
             ) -> (
                 ::locktree::PluggedAsyncRwLockReadGuard<'a, SuperRwLock<()>>,
                 MainLockTreeRwLock<'a>
@@ -266,7 +266,7 @@ fn should_handle_an_async_rw_lock() {
             }
 
             pub fn write_rw_lock<'a>(
-                &'a mut self
+                &'a self
             ) -> (
                 ::locktree::PluggedAsyncRwLockWriteGuard<'a, SuperRwLock<()>>,
                 MainLockTreeRwLock<'a>
@@ -308,7 +308,7 @@ fn should_handle_two_locks() {
             }
 
             pub fn lock_mutex0<'a>(
-                &'a mut self
+                &'a self
             ) -> (
                 ::locktree::PluggedMutexGuard<'a, ::std::sync::Mutex<()>>,
                 MainLockTreeMutex0<'a>
@@ -317,7 +317,7 @@ fn should_handle_two_locks() {
             }
 
             pub fn lock_mutex1<'a>(
-                &'a mut self
+                &'a self
             ) -> (
                 ::locktree::PluggedMutexGuard<'a, ::std::sync::Mutex<()>>,
                 MainLockTreeMutex1<'a>

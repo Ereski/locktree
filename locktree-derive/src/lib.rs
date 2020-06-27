@@ -127,6 +127,7 @@ impl LockType {
         };
 
         self.interface.accessor_functions(
+            !is_entry_point,
             self.is_async,
             &name,
             &forward,
@@ -203,12 +204,21 @@ impl LockInterface {
 
     fn accessor_functions(
         &self,
+        use_mut_ref: bool,
         is_async: bool,
         name: &proc_macro2::Ident,
         forward: &proc_macro2::Ident,
         accessor: &TokenStream,
         declaration: &TokenStream,
     ) -> TokenStream {
+        let mut_keyword = if use_mut_ref {
+            Some(proc_macro2::Ident::new(
+                "mut",
+                proc_macro2::Span::call_site(),
+            ))
+        } else {
+            None
+        };
         match self {
             Self::Mutex => {
                 let lock_fn_name = proc_macro2::Ident::new(
@@ -227,7 +237,7 @@ impl LockInterface {
 
                 quote! {
                     pub fn #lock_fn_name<'a>(
-                        &'a mut self
+                        &'a #mut_keyword self
                     ) -> (
                         ::locktree::#guard<'a, #declaration>,
                         #forward<'a>
@@ -261,7 +271,7 @@ impl LockInterface {
 
                 quote! {
                     pub fn #read_fn_name<'a>(
-                        &'a mut self
+                        &'a #mut_keyword self
                     ) -> (
                         ::locktree::#read_guard<'a, #declaration>,
                         #forward<'a>
@@ -270,7 +280,7 @@ impl LockInterface {
                     }
 
                     pub fn #write_fn_name<'a>(
-                        &'a mut self
+                        &'a #mut_keyword self
                     ) -> (
                         ::locktree::#write_guard<'a, #declaration>,
                         #forward<'a>

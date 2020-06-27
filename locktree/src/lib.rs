@@ -145,7 +145,7 @@ use std::pin::Pin;
 /// `locktree!` macro. See the module-level documentation for details.
 pub use locktree_derive::locktree;
 
-mod plug;
+pub mod plug;
 
 pub type PluggedGuard<'a, T> = <T as PlugLifetime<'a>>::Type;
 

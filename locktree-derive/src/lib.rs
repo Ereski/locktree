@@ -127,12 +127,12 @@ impl LockType {
         };
 
         self.interface.accessor_functions(
+            !is_entry_point,
             self.is_async,
             &name,
             &forward,
             &accessor,
             &self.declaration,
-            is_entry_point,
         )
     }
 
@@ -204,30 +204,20 @@ impl LockInterface {
 
     fn accessor_functions(
         &self,
+        use_mut_ref: bool,
         is_async: bool,
         name: &proc_macro2::Ident,
         forward: &proc_macro2::Ident,
         accessor: &TokenStream,
         declaration: &TokenStream,
-        is_entry_point: bool,
     ) -> TokenStream {
-        let (mut_keyword, atomic_check) = if is_entry_point {
-            (
-                None,
-                Some(quote! {
-                    if self.glsBWeCagvYcGEd.compare_and_swap(false, true, ::std::sync::atomic::Ordering::AcqRel) {
-                        panic!("potential deadlock detected: MainLockTree was locked twice");
-                    }
-                }),
-            )
+        let mut_keyword = if use_mut_ref {
+            Some(proc_macro2::Ident::new(
+                "mut",
+                proc_macro2::Span::call_site(),
+            ))
         } else {
-            (
-                Some(proc_macro2::Ident::new(
-                    "mut",
-                    proc_macro2::Span::call_site(),
-                )),
-                None,
-            )
+            None
         };
         match self {
             Self::Mutex => {
@@ -252,8 +242,6 @@ impl LockInterface {
                         ::locktree::#guard<'a, #declaration>,
                         #forward<'a>
                     ) {
-                        #atomic_check
-
                         (::locktree::#lock::lock(&#accessor.#name), #forward { locks: #accessor })
                     }
                 }
@@ -288,8 +276,6 @@ impl LockInterface {
                         ::locktree::#read_guard<'a, #declaration>,
                         #forward<'a>
                     ) {
-                        #atomic_check
-
                         (::locktree::#lock::read(&#accessor.#name), #forward { locks: #accessor })
                     }
 
@@ -299,8 +285,6 @@ impl LockInterface {
                         ::locktree::#write_guard<'a, #declaration>,
                         #forward<'a>
                     ) {
-                        #atomic_check
-
                         (::locktree::#lock::write(&#accessor.#name), #forward { locks: #accessor })
                     }
                 }
@@ -363,7 +347,6 @@ fn locktree_impl(input: TokenStream) -> TokenStream {
             pub fn new(#(#init_args),*) -> Self {
                 Self {
                     #(#init_statements)*
-                    glsBWeCagvYcGEd: ::std::sync::atomic::AtomicBool::new(false)
                 }
             }
         };
@@ -373,7 +356,6 @@ fn locktree_impl(input: TokenStream) -> TokenStream {
         code.extend(quote! {
             struct #main_struct {
                 #(#lock_declarations)*
-                glsBWeCagvYcGEd: ::std::sync::atomic::AtomicBool
             }
 
             impl #main_struct {
@@ -399,16 +381,6 @@ fn locktree_impl(input: TokenStream) -> TokenStream {
                     #(#forward_accessors)*
                 }
             });
-
-            if i == 0 {
-                code.extend(quote! {
-                    impl<'b> Drop for #name<'b> {
-                        fn drop(&mut self) {
-                            self.locks.glsBWeCagvYcGEd.store(false, ::std::sync::atomic::Ordering::Release)
-                        }
-                    }
-                })
-            }
         }
     }
 

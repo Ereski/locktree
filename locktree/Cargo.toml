@@ -14,8 +14,8 @@ tokio_0_2 = ['tokio']
 [dependencies]
 locktree-derive = { version = "0.3", path = "../locktree-derive" }
 
-tokio = { version = "0.2", default-features = false, features = ['sync'], optional = true }
+tokio = { version = "1.23.0", default-features = false, features = ['sync'], optional = true }
 
 [dev-dependencies]
-tokio = { version = "0.2", default-features = false, features = ['macros', 'rt-threaded', 'sync'] }
-trybuild = "1.0"
+tokio = { version = "1.23.0", default-features = false, features = ['macros', 'rt-multi-thread', 'sync'] }
+trybuild = "1.0.72"
